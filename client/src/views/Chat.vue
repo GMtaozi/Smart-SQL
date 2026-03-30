@@ -222,18 +222,13 @@ import { ChatDotRound, UserFilled, CopyDocument, VideoPlay, Promotion, Loading, 
 import { generateSQL, executeSQL } from '@/api/query'
 import { datasourceApi } from '@/api/datasource'
 import { useChatStore, type Message } from '@/stores/chat'
+import { storeToRefs } from 'pinia'
 
 // 使用 store 持久化聊天记录
 const chatStore = useChatStore()
 
-// Pinia store 的 ref 会自动 unwrap，所以直接用
-const messages = chatStore.messages
-const generating = chatStore.generating
-const executing = chatStore.executing
-const selectedDatasourceId = chatStore.selectedDatasourceId
-// 清屏相关状态通过 computed 确保响应式
-const isScreenCleared = computed(() => chatStore.isScreenCleared)
-const hiddenMessages = computed(() => chatStore.hiddenMessages)
+// 使用 storeToRefs 保持响应式
+const { messages, generating, executing, selectedDatasourceId, hiddenMessages, isScreenCleared } = storeToRefs(chatStore)
 
 const userQuery = ref('')
 const datasources = ref<{ id: number; name: string }[]>([])
@@ -271,7 +266,7 @@ const scrollToBottom = () => {
 }
 
 const sendQuery = async () => {
-  if (!userQuery.value.trim() || !selectedDatasourceId) {
+  if (!userQuery.value.trim() || !selectedDatasourceId.value) {
     ElMessage.warning('请输入问题并选择数据源')
     return
   }
@@ -286,7 +281,7 @@ const sendQuery = async () => {
   scrollToBottom()
 
   try {
-    const res = await generateSQL(query, selectedDatasourceId)
+    const res = await generateSQL(query, selectedDatasourceId.value)
 
     chatStore.setGenerating(false)
 
@@ -312,11 +307,11 @@ const sendQuery = async () => {
 }
 
 const executeQuery = async (msg: Message) => {
-  if (!msg.sql || !selectedDatasourceId) return
+  if (!msg.sql || !selectedDatasourceId.value) return
 
   chatStore.setExecuting(true)
   try {
-    const res = await executeSQL(msg.sql, selectedDatasourceId)
+    const res = await executeSQL(msg.sql, selectedDatasourceId.value)
 
     // 找到该消息在 messages 数组中的索引并更新
     const index = chatStore.messages.findIndex((m) => m === msg)
