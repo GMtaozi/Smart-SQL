@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker-compose down:*)",
+      "Bash(docker-compose up:*)",
+      "Bash(docker-compose logs:*)",
+      "Bash(curl:*)",
+      "Bash(docker-compose build:*)",
+      "Bash(find 'D:/trae file/SQLBot-main/frontend/src' -type f -name *.vue -o -name *.ts -o -name *.less)",
+      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwidXNlcm5hbWUiOiJzcWxib3QiLCJleHAiOjE3NzQ4NDE0NzcsImlhdCI6MTc3NDc1NTA3N30.JK_JLstbWrgYldfyRq3DPrCDklkahOHUy-KPw_USKJw\")",
+      "Bash(docker-compose restart:*)",
+      "Bash(docker exec:*)",
+      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwidXNlcm5hbWUiOiJzcWxib3QiLCJleHAiOjE3NzQ4NDcxMzgsImlhdCI6MTc3NDc2MDczOH0.LF4LAmDVjBSQ6UaesEEw5G2lgZIbVPDw2iYYaMdit2g\")",
+      "Bash(python -m py_compile server/api/schema.py)",
+      "Bash(python -m py_compile server/services/sql_generator.py)",
+      "Bash(python -m py_compile server/services/sql_executor.py)",
+      "Bash(npm run:*)",
+      "Bash(python -m py_compile server/services/ai_model_service.py)",
+      "Bash(docker compose:*)",
+      "Bash(sed -n '760,1195p' server/api/schema.py)",
+      "Read(//tmp/**)",
+      "Bash(python3 -m py_compile server/api/schema.py)",
+      "Bash(docker-compose config:*)",
+      "Bash(python3:*)",
+      "Bash(where python:*)",
+      "Bash(where python3:*)",
+      "Bash(D:/Python311/python.exe -m py_compile \"D:/trae file/sqlbot/server/api/schema.py\" 2>&1)",
+      "Bash(python -m py_compile api/schema.py)",
+      "Bash(docker-compose exec:*)",
+      "Bash(docker-compose run:*)",
+      "Bash(python:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
+    ]
+  }
+}
