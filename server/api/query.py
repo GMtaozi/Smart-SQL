@@ -155,9 +155,9 @@ def execute_sql(
         db_type=ds_row[5] or "postgresql",
     )
 
-    # Execute
+    # Execute with preview mode (returns first 10 rows + total count)
     executor = get_sql_executor()
-    result = executor.execute(request.sql, config)
+    result = executor.execute(request.sql, config, preview_mode=True)
 
     # Update query log status
     try:
@@ -179,7 +179,7 @@ def execute_sql(
             "status": "success" if result.success else "failed",
             "executed_sql": request.sql,
             "execution_time_ms": result.execution_time_ms,
-            "row_count": result.row_count,
+            "row_count": result.total_count,  # Log total count, not preview count
             "error_message": result.error,
             "user_id": user_id,
             "datasource_id": request.datasource_id,
@@ -192,7 +192,8 @@ def execute_sql(
         success=result.success,
         columns=result.columns,
         rows=result.rows,
-        row_count=result.row_count,
+        row_count=result.row_count,  # Preview row count (up to 10)
+        total_count=result.total_count,  # Total rows available
         execution_time_ms=result.execution_time_ms,
         error=result.error,
     )
@@ -444,9 +445,9 @@ def create_export_task(
         db_type=ds_row[5] or "postgresql",
     )
 
-    # First execute with limit to get preview and count
+    # First execute with preview mode to get first 10 rows and total count
     executor = get_sql_executor()
-    preview_result = executor.execute(request.sql, config)
+    preview_result = executor.execute(request.sql, config, preview_mode=True)
 
     if not preview_result.success:
         raise HTTPException(

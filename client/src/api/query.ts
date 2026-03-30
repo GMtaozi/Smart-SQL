@@ -25,6 +25,7 @@ export interface ExecuteSQLResponse {
   columns: string[]
   rows: Record<string, unknown>[]
   row_count: number
+  total_count: number
   execution_time_ms: number
   error?: string
 }

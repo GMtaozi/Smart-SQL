@@ -7,7 +7,8 @@ export interface Message {
   sql?: string
   result?: any[]
   columns?: string[]
-  rowCount?: number
+  rowCount?: number  // Rows displayed (up to 10 in preview)
+  totalCount?: number  // Total rows available
   executionTime?: number
   error?: string
   viewMode?: 'table' | 'card' | 'chart'

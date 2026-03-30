@@ -30,6 +30,7 @@ class QueryExecuteResponse(BaseModel):
     columns: List[str]
     rows: List[dict]
     row_count: int
+    total_count: int = 0
     execution_time_ms: float
     error: Optional[str] = None
 

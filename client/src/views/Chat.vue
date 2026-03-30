@@ -65,7 +65,7 @@
                 <div class="result-header">
                   <div class="result-header-left">
                     <span>查询结果</span>
-                    <span class="result-stats">{{ msg.rowCount || 0 }} 行 | {{ msg.executionTime || 0 }}ms</span>
+                    <span class="result-stats">{{ msg.totalCount || msg.rowCount || 0 }} 行 | {{ msg.executionTime || 0 }}ms</span>
                   </div>
                   <div class="view-switch" v-if="msg.result.length > 0">
                     <el-radio-group v-model="msg.viewMode" size="small">
@@ -75,7 +75,7 @@
                     </el-radio-group>
                   </div>
                   <!-- Export button for large datasets -->
-                  <div v-if="(msg.rowCount || 0) > 10" class="export-section">
+                  <div v-if="(msg.totalCount || 0) > 10" class="export-section">
                     <el-button
                       v-if="exportingMsgId !== messages.indexOf(msg)"
                       type="warning"
@@ -92,10 +92,10 @@
                   </div>
                 </div>
                 <!-- Export hint -->
-                <div v-if="(msg.rowCount || 0) > 10" class="export-hint">
+                <div v-if="(msg.totalCount || 0) > 10" class="export-hint">
                   <el-alert type="info" :closable="false" show-icon>
                     <template #title>
-                      当前显示前10行数据（共 {{ msg.rowCount }} 行），如需完整数据请点击「导出CSV」
+                      当前显示前{{ msg.rowCount || 0 }}行数据（共 {{ msg.totalCount }} 行），如需完整数据请点击「导出CSV」
                     </template>
                   </el-alert>
                 </div>
@@ -344,6 +344,7 @@ const executeQuery = async (msg: Message) => {
         result: res.rows,
         columns: res.columns,
         rowCount: res.row_count,
+        totalCount: res.total_count,
         executionTime: res.execution_time_ms,
         viewMode: msg.viewMode || 'table',
       })
@@ -388,18 +389,24 @@ const needsExport = (msg: Message): boolean => {
 
 // Handle export
 const handleExport = async (msg: Message) => {
-  if (!msg.sql || !selectedDatasourceId.value) return
+  if (!msg.sql || !selectedDatasourceId.value) {
+    console.log('[DEBUG] handleExport: missing sql or datasourceId', msg.sql, selectedDatasourceId.value)
+    return
+  }
 
-  // Check if this message already has a task ID or needs export
-  const needsExport = (msg.rowCount || 0) > 10
+  // Check if needs export based on total count
+  const needsExport = (msg.totalCount || 0) > 10
+  console.log('[DEBUG] handleExport: totalCount=', msg.totalCount, 'needsExport=', needsExport)
   if (!needsExport) return
 
   exportingMsgId.value = messages.value.indexOf(msg)
   exportingTaskId.value = null
 
   try {
+    console.log('[DEBUG] handleExport: calling createExportTask', msg.sql)
     // Create export task
     const res = await createExportTask(msg.sql, selectedDatasourceId.value)
+    console.log('[DEBUG] handleExport: task created', res)
     exportingTaskId.value = res.task_id
 
     ElMessage.info('正在导出数据，请稍候...')
@@ -407,6 +414,7 @@ const handleExport = async (msg: Message) => {
     // Start polling for status
     pollExportStatus(res.task_id)
   } catch (error: any) {
+    console.error('[DEBUG] handleExport error:', error)
     ElMessage.error(error.response?.data?.detail || '创建导出任务失败')
     exportingTaskId.value = null
     exportingMsgId.value = null

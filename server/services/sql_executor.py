@@ -15,7 +15,7 @@ from server.db.database import get_db_session
 
 # Security constraints
 DEFAULT_STATEMENT_TIMEOUT_MS = 30000  # 30 seconds
-DEFAULT_ROW_LIMIT = 10  # Preview limit for normal queries
+PREVIEW_ROW_LIMIT = 10  # Preview limit for frontend display
 
 
 @dataclass
@@ -24,9 +24,10 @@ class ExecutionResult:
     success: bool
     columns: list[str]
     rows: list[dict]
-    row_count: int
+    row_count: int  # Actual number of rows returned (may be limited)
     execution_time_ms: float
     error: Optional[str] = None
+    total_count: int = 0  # Total rows available (0 means unknown)
 
 
 @dataclass
@@ -90,7 +91,7 @@ class SQLExecutor:
     def __init__(
         self,
         statement_timeout_ms: int = DEFAULT_STATEMENT_TIMEOUT_MS,
-        row_limit: int = DEFAULT_ROW_LIMIT,
+        row_limit: int = PREVIEW_ROW_LIMIT,
     ):
         self.statement_timeout_ms = statement_timeout_ms
         self.row_limit = row_limit
@@ -166,6 +167,7 @@ class SQLExecutor:
         self,
         sql: str,
         datasource_config: DatasourceConfig,
+        preview_mode: bool = False,
     ) -> ExecutionResult:
         """
         Execute SQL with read-only constraints.
@@ -173,14 +175,16 @@ class SQLExecutor:
         Args:
             sql: SQL statement to execute
             datasource_config: Target database connection config
+            preview_mode: If True, only return first PREVIEW_ROW_LIMIT rows and total count
 
         Returns:
             ExecutionResult with columns, rows, and metadata
         """
         start_time = datetime.now()
 
-        # Inject timeout and row limit
-        safe_sql = self._inject_timeout_and_limit(sql, datasource_config.db_type)
+        # For preview_mode, we need full results but return only preview
+        # For normal mode, we don't add LIMIT anymore - execute full SQL
+        safe_sql = self._inject_timeout_and_limit(sql, datasource_config.db_type, apply_limit=False)
 
         try:
             engine = self._get_engine(datasource_config)
@@ -196,8 +200,9 @@ class SQLExecutor:
                 # Fetch all rows
                 rows = result.fetchall()
                 columns = list(result.keys())
+                total_count = len(rows)
 
-                print(f"[DEBUG] Query returned {len(rows)} rows, columns: {columns}")
+                print(f"[DEBUG] Query returned {total_count} rows, columns: {columns}")
 
                 # Convert to list of dicts - handle special types like datetime
                 row_dicts = []
@@ -216,6 +221,20 @@ class SQLExecutor:
                 else:
                     print(f"[DEBUG] No rows returned")
 
+                # In preview_mode, return only first N rows and total count
+                if preview_mode:
+                    preview_rows = row_dicts[:PREVIEW_ROW_LIMIT]
+                    return ExecutionResult(
+                        success=True,
+                        columns=columns,
+                        rows=preview_rows,
+                        row_count=len(preview_rows),
+                        total_count=total_count,
+                        execution_time_ms=(
+                            datetime.now() - start_time
+                        ).total_seconds() * 1000,
+                    )
+
                 execution_time_ms = (
                     datetime.now() - start_time
                 ).total_seconds() * 1000
@@ -225,6 +244,7 @@ class SQLExecutor:
                     columns=columns,
                     rows=row_dicts,
                     row_count=len(row_dicts),
+                    total_count=total_count,
                     execution_time_ms=execution_time_ms,
                 )
 
