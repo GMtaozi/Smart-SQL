@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useChatStore } from '@/stores/chat'
 
 const routes = [
   {
@@ -57,18 +58,19 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
-  const authStore = useAuthStore()
+  // Check for token in localStorage directly for initial auth state
+  const token = localStorage.getItem('token')
 
   if (to.meta.requiresAuth === false) {
     // Public route
-    if (to.path === '/login' && authStore.isAuthenticated) {
+    if (to.path === '/login' && token) {
       next('/chat')
     } else {
       next()
     }
   } else {
     // Protected route
-    if (!authStore.isAuthenticated) {
+    if (!token) {
       next('/login')
     } else {
       next()

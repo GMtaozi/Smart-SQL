@@ -264,8 +264,8 @@ const loadDatasources = async () => {
     datasources.value = res.data
 
     // Validate selectedDatasourceId belongs to current user
-    if (selectedDatasourceId) {
-      const exists = res.data.some((ds: any) => ds.id === selectedDatasourceId)
+    if (selectedDatasourceId.value) {
+      const exists = res.data.some((ds: any) => ds.id === selectedDatasourceId.value)
       if (!exists) {
         // Selected datasource no longer belongs to current user, clear it
         chatStore.setDatasource(null)
@@ -273,7 +273,7 @@ const loadDatasources = async () => {
     }
 
     // Auto-select first datasource if none selected
-    if (res.data.length > 0 && !selectedDatasourceId) {
+    if (res.data.length > 0 && !selectedDatasourceId.value) {
       chatStore.setDatasource(res.data[0].id)
     }
   } catch (error) {
