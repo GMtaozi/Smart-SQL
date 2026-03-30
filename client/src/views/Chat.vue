@@ -95,7 +95,7 @@
                 <div v-if="(msg.rowCount || 0) > 10" class="export-hint">
                   <el-alert type="info" :closable="false" show-icon>
                     <template #title>
-                      当前显示前1000行数据（共 {{ msg.rowCount }} 行），如需完整数据请点击「导出CSV」
+                      当前显示前10行数据（共 {{ msg.rowCount }} 行），如需完整数据请点击「导出CSV」
                     </template>
                   </el-alert>
                 </div>

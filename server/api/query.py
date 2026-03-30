@@ -1,6 +1,7 @@
 """Query API routes - NL to SQL generation and execution"""
 
 import json
+import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -338,7 +339,7 @@ def _process_export_task(task_id: str, sql: str, datasource_id: int, user_id: in
         for row in result.rows:
             writer.writerow([row.get(col, "") for col in result.columns])
 
-        csv_content = output.getvalue()
+        csv_content = "\ufeff" + output.getvalue()  # Add UTF-8 BOM for Excel compatibility
         output.close()
 
         # Update task as completed

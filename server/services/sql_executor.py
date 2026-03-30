@@ -15,7 +15,7 @@ from server.db.database import get_db_session
 
 # Security constraints
 DEFAULT_STATEMENT_TIMEOUT_MS = 30000  # 30 seconds
-DEFAULT_ROW_LIMIT = 1000
+DEFAULT_ROW_LIMIT = 10  # Preview limit for normal queries
 
 
 @dataclass

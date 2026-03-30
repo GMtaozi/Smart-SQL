@@ -84,9 +84,8 @@ export const useChatStore = defineStore('chat', () => {
 
   // 添加用户消息
   function addUserMessage(content: string) {
-    // 如果处于清屏状态，先恢复显示
-    if (isScreenCleared.value && hiddenMessages.value.length > 0) {
-      messages.value = [...hiddenMessages.value]
+    // 清屏后发送新消息时，清除隐藏的历史记录，开始新对话
+    if (isScreenCleared.value) {
       hiddenMessages.value = []
       isScreenCleared.value = false
     }
