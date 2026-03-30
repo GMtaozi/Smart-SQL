@@ -62,6 +62,7 @@ def init_db():
     from server.models.ai_model import AIModel
     from server.models.terminology import Terminology
     from server.models.data_training import DataTraining
+    from server.models.export_task import ExportTask
     from server.db.base import Base
 
     # Create all tables using the shared Base

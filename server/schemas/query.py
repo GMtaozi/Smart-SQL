@@ -53,3 +53,30 @@ class QueryFeedbackRequest(BaseModel):
     is_correct: bool
     corrected_sql: Optional[str] = None
     feedback_text: Optional[str] = None
+
+
+class ExportCreateRequest(BaseModel):
+    """Export task creation request."""
+    sql: str
+    datasource_id: int
+
+
+class ExportCreateResponse(BaseModel):
+    """Export task creation response."""
+    task_id: str
+    status: str
+    preview_rows: List[dict]
+    preview_columns: List[str]
+    preview_row_count: int
+    total_rows: int
+    message: str
+
+
+class ExportStatusResponse(BaseModel):
+    """Export task status response."""
+    task_id: str
+    status: str  # pending, processing, completed, failed
+    total_rows: Optional[int] = None
+    csv_content: Optional[str] = None
+    error_message: Optional[str] = None
+    message: str

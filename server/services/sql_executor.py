@@ -135,13 +135,19 @@ class SQLExecutor:
             print(f"[DEBUG] Engine validation failed: {e}")
             return False
 
-    def _inject_timeout_and_limit(self, sql: str, db_type: str) -> str:
+    def _inject_timeout_and_limit(self, sql: str, db_type: str, apply_limit: bool = True) -> str:
         """Inject statement timeout and row limit into SQL."""
         import re
         sql = sql.strip().rstrip(';')
 
         # Remove existing LIMIT clause (case-insensitive, handles newlines)
         sql = re.sub(r'\s+LIMIT\s+\d+\s*$', '', sql, flags=re.IGNORECASE)
+
+        if not apply_limit:
+            # No limit mode for exports - only set timeout
+            if db_type == "postgresql":
+                return f"SET statement_timeout = '{self.statement_timeout_ms}ms'; {sql}"
+            return sql
 
         if db_type == "postgresql":
             # Set session timeout and add LIMIT
@@ -228,6 +234,84 @@ class SQLExecutor:
             ).total_seconds() * 1000
             import traceback
             print(f"[ERROR] SQL execution failed: {str(e)}")
+            print(f"[ERROR] Traceback: {traceback.format_exc()}")
+
+            return ExecutionResult(
+                success=False,
+                columns=[],
+                rows=[],
+                row_count=0,
+                execution_time_ms=execution_time_ms,
+                error=str(e),
+            )
+
+    def execute_no_limit(
+        self,
+        sql: str,
+        datasource_config: DatasourceConfig,
+    ) -> ExecutionResult:
+        """
+        Execute SQL without row limit (for exports).
+
+        Args:
+            sql: SQL statement to execute
+            datasource_config: Target database connection config
+
+        Returns:
+            ExecutionResult with columns, rows, and metadata (all rows)
+        """
+        start_time = datetime.now()
+
+        # Inject timeout but NO row limit
+        safe_sql = self._inject_timeout_and_limit(sql, datasource_config.db_type, apply_limit=False)
+
+        try:
+            engine = self._get_engine(datasource_config)
+            print(f"[DEBUG] Executing SQL (no limit) on {datasource_config.db_type}")
+            print(f"[DEBUG] Original SQL: {sql}")
+            print(f"[DEBUG] Safe SQL: {safe_sql}")
+
+            with engine.connect() as conn:
+                # Execute query
+                result = conn.execute(text(safe_sql))
+                conn.commit()
+
+                # Fetch all rows
+                rows = result.fetchall()
+                columns = list(result.keys())
+
+                print(f"[DEBUG] Query returned {len(rows)} rows, columns: {columns}")
+
+                # Convert to list of dicts - handle special types like datetime
+                row_dicts = []
+                for row in rows:
+                    row_dict = {}
+                    for i, col in enumerate(columns):
+                        val = row[i]
+                        # Convert datetime objects to ISO format strings
+                        if hasattr(val, 'isoformat'):
+                            val = val.isoformat()
+                        row_dict[col] = val
+                    row_dicts.append(row_dict)
+
+                execution_time_ms = (
+                    datetime.now() - start_time
+                ).total_seconds() * 1000
+
+                return ExecutionResult(
+                    success=True,
+                    columns=columns,
+                    rows=row_dicts,
+                    row_count=len(row_dicts),
+                    execution_time_ms=execution_time_ms,
+                )
+
+        except Exception as e:
+            execution_time_ms = (
+                datetime.now() - start_time
+            ).total_seconds() * 1000
+            import traceback
+            print(f"[ERROR] SQL execution (no limit) failed: {str(e)}")
             print(f"[ERROR] Traceback: {traceback.format_exc()}")
 
             return ExecutionResult(

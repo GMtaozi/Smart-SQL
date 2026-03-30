@@ -77,3 +77,36 @@ export async function submitFeedback(
   })
   return data
 }
+
+// Export API
+export interface ExportCreateResponse {
+  task_id: string
+  status: string
+  preview_rows: Record<string, unknown>[]
+  preview_columns: string[]
+  preview_row_count: number
+  total_rows: number
+  message: string
+}
+
+export interface ExportStatusResponse {
+  task_id: string
+  status: 'pending' | 'processing' | 'completed' | 'failed'
+  total_rows?: number
+  csv_content?: string
+  error_message?: string
+  message: string
+}
+
+export async function createExportTask(sql: string, datasourceId: number): Promise<ExportCreateResponse> {
+  const { data } = await request.post('/query/export', {
+    sql,
+    datasource_id: datasourceId,
+  })
+  return data
+}
+
+export async function getExportStatus(taskId: string): Promise<ExportStatusResponse> {
+  const { data } = await request.get(`/query/export/${taskId}`)
+  return data
+}

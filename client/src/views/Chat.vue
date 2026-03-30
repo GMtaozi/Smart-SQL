@@ -74,6 +74,30 @@
                       <el-radio-button label="chart" v-if="canShowChart(msg)">图表</el-radio-button>
                     </el-radio-group>
                   </div>
+                  <!-- Export button for large datasets -->
+                  <div v-if="(msg.rowCount || 0) > 10" class="export-section">
+                    <el-button
+                      v-if="exportingMsgId !== messages.indexOf(msg)"
+                      type="warning"
+                      size="small"
+                      @click="handleExport(msg)"
+                    >
+                      <el-icon><Download /></el-icon>
+                      导出CSV
+                    </el-button>
+                    <el-tag v-else type="warning" size="small">
+                      <el-icon class="is-loading"><Loading /></el-icon>
+                      导出中...
+                    </el-tag>
+                  </div>
+                </div>
+                <!-- Export hint -->
+                <div v-if="(msg.rowCount || 0) > 10" class="export-hint">
+                  <el-alert type="info" :closable="false" show-icon>
+                    <template #title>
+                      当前显示前1000行数据（共 {{ msg.rowCount }} 行），如需完整数据请点击「导出CSV」
+                    </template>
+                  </el-alert>
                 </div>
 
                 <!-- Table View -->
@@ -218,8 +242,8 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
-import { ChatDotRound, UserFilled, CopyDocument, VideoPlay, Promotion, Loading, DataAnalysis, Delete, View } from '@element-plus/icons-vue'
-import { generateSQL, executeSQL } from '@/api/query'
+import { ChatDotRound, UserFilled, CopyDocument, VideoPlay, Promotion, Loading, DataAnalysis, Delete, View, Download } from '@element-plus/icons-vue'
+import { generateSQL, executeSQL, createExportTask, getExportStatus } from '@/api/query'
 import { datasourceApi } from '@/api/datasource'
 import { useChatStore, type Message } from '@/stores/chat'
 import { storeToRefs } from 'pinia'
@@ -351,6 +375,87 @@ const executeQuery = async (msg: Message) => {
 const copySql = (sql: string) => {
   navigator.clipboard.writeText(sql)
   ElMessage.success('已复制到剪贴板')
+}
+
+// Export related state
+const exportingTaskId = ref<string | null>(null)
+const exportingMsgId = ref<number | null>(null)
+
+// Check if result needs export (more than 10 rows)
+const needsExport = (msg: Message): boolean => {
+  return (msg.rowCount || 0) > 10
+}
+
+// Handle export
+const handleExport = async (msg: Message) => {
+  if (!msg.sql || !selectedDatasourceId.value) return
+
+  // Check if this message already has a task ID or needs export
+  const needsExport = (msg.rowCount || 0) > 10
+  if (!needsExport) return
+
+  exportingMsgId.value = messages.value.indexOf(msg)
+  exportingTaskId.value = null
+
+  try {
+    // Create export task
+    const res = await createExportTask(msg.sql, selectedDatasourceId.value)
+    exportingTaskId.value = res.task_id
+
+    ElMessage.info('正在导出数据，请稍候...')
+
+    // Start polling for status
+    pollExportStatus(res.task_id)
+  } catch (error: any) {
+    ElMessage.error(error.response?.data?.detail || '创建导出任务失败')
+    exportingTaskId.value = null
+    exportingMsgId.value = null
+  }
+}
+
+// Poll export status until completed
+const pollExportStatus = async (taskId: string) => {
+  const poll = async () => {
+    try {
+      const statusRes = await getExportStatus(taskId)
+
+      if (statusRes.status === 'completed' && statusRes.csv_content) {
+        // Download CSV
+        downloadCSV(statusRes.csv_content, `export_${taskId.slice(0, 8)}.csv`)
+        ElMessage.success('导出成功，文件已开始下载')
+        exportingTaskId.value = null
+        exportingMsgId.value = null
+        return
+      } else if (statusRes.status === 'failed') {
+        ElMessage.error('导出失败: ' + statusRes.error_message)
+        exportingTaskId.value = null
+        exportingMsgId.value = null
+        return
+      }
+
+      // Continue polling
+      if (exportingTaskId.value === taskId) {
+        setTimeout(poll, 1000)
+      }
+    } catch (error: any) {
+      console.error('[DEBUG] Poll export status error:', error)
+      if (exportingTaskId.value === taskId) {
+        setTimeout(poll, 2000)
+      }
+    }
+  }
+
+  poll()
+}
+
+// Download CSV file
+const downloadCSV = (csvContent: string, filename: string) => {
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(blob)
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(link.href)
 }
 
 const handleClearScreen = () => {
